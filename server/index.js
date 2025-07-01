@@ -1,42 +1,46 @@
 const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const createGame = require("./game");
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
+const game = require("./game");
 
-const game = createGame(io);
+app.use(express.static(__dirname + "/../public"));
 
-app.use(express.static("public"));
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => {
+    console.log("Server started on port", PORT);
+});
+
+game.initWorld();
+
+setInterval(() => {
+    game.updateNPCs();
+    io.emit("gameState", game.getState());
+}, 1000);
 
 io.on("connection", (socket) => {
     console.log("Player connected:", socket.id);
-    game.addPlayer(socket, "Unnamed Pirate");
-
-    socket.on("setName", name => {
-        game.updatePlayerName(socket.id, name);
-    });
-
-    socket.on("move", dir => {
-        game.movePlayer(socket.id, dir);
-    });
-
-    socket.on("newWorld", () => {
-        game.resetWorld();
-    });
-
-    socket.on("fireCannons", () => {
-        game.playerFire(socket.id);
-    });
+    game.addPlayer(socket.id);
+    io.emit("gameState", game.getState());
 
     socket.on("disconnect", () => {
         console.log("Player disconnected:", socket.id);
         game.removePlayer(socket.id);
+        io.emit("gameState", game.getState());
     });
-});
 
-server.listen(3000, () => {
-    console.log("Server running at http://localhost:3000");
+    socket.on("move", (dir) => {
+        game.movePlayer(socket.id, dir);
+        io.emit("gameState", game.getState());
+    });
+
+    socket.on("setName", (name) => {
+        game.setPlayerName(socket.id, name);
+        io.emit("gameState", game.getState());
+    });
+
+    socket.on("fireCannons", () => {
+        game.fireCannons(socket.id);
+        io.emit("gameState", game.getState());
+    });
 });

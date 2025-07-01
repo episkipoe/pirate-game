@@ -16,6 +16,28 @@ const config = {
         create: function () {
             scene = this;
             scene.fogTiles = [];
+
+            this.input.on('pointerdown', function (pointer) {
+                if (!myId || !scene || !scene.playerPos) return;
+
+                const me = scene.playerPos;
+                const clickX = pointer.x;
+                const clickY = pointer.y;
+
+                const dx = Math.round((clickX - config.width / 2) / TILE_SIZE);
+                const dy = Math.round((clickY - config.height / 2) / TILE_SIZE);
+
+                let dir = null;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    dir = dx > 0 ? 'right' : 'left';
+                } else if (Math.abs(dy) > 0) {
+                    dir = dy > 0 ? 'down' : 'up';
+                }
+
+                if (dir) {
+                    socket.emit("move", dir);
+                }
+            });
         },
         update: function () {}
     }
@@ -43,6 +65,7 @@ socket.on("gameState", (state) => {
     const me = state.players[myId];
     if (!me) return;
 
+    scene.playerPos = { x: me.x, y: me.y };
     const centerX = config.width / 2;
     const centerY = config.height / 2;
 
@@ -76,12 +99,12 @@ socket.on("gameState", (state) => {
         const x = centerX + dx * TILE_SIZE;
         const y = centerY + dy * TILE_SIZE;
         scene.add.text(x, y, "🚢", { fontSize: TILE_SIZE + "px" }).setOrigin(0.5);
-        scene.add.text(x, y - TILE_SIZE * 0.6, npc.type, { fontSize: "8px" }).setOrigin(0.5);
-        scene.add.text(x, y + TILE_SIZE * 0.6, `HP: ${npc.hp}`, { fontSize: "8px", color: "#000" }).setOrigin(0.5);
+        scene.add.text(x, y - TILE_SIZE * 0.6, npc.type, { fontSize: "16px" }).setOrigin(0.5);
+        scene.add.text(x, y + TILE_SIZE * 0.6, `HP: ${npc.hp}`, { fontSize: "16px", color: "#000" }).setOrigin(0.5);
         const dist = Math.abs(npc.x - me.x) + Math.abs(npc.y - me.y);
         if (dist <= 2) {
             const outline = scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE);
-            outline.setStrokeStyle(2, 0xFF0000);
+            outline.setStrokeStyle(4, 0xFF0000);
             outline.setOrigin(0.5);
         }
     }
@@ -95,6 +118,6 @@ socket.on("gameState", (state) => {
         const y = centerY + dy * TILE_SIZE;
         const color = id === myId ? 0xffffff : 0x888888;
         scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE, color);
-        scene.add.text(x, y - TILE_SIZE * 0.6, p.name, { fontSize: "8px" }).setOrigin(0.5);
+        scene.add.text(x, y - TILE_SIZE * 0.6, p.name, { fontSize: "16px" }).setOrigin(0.5);
     }
 });
