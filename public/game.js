@@ -1,83 +1,171 @@
-let socket;
+const socket = io();
 const TILE_SIZE = 32;
-const MAP_WIDTH = 20;
-const MAP_HEIGHT = 15;
-let playerSprites = {};
-let players = {};
+const GRID_WIDTH = 120;
+const GRID_HEIGHT = 120;
+const VIEW_RADIUS = 12;
+
 let scene;
+let myId = null;
 
-document.getElementById("startBtn").addEventListener("click", () => {
-    const name = document.getElementById("nameInput").value.trim() || "Anon";
-    localStorage.setItem("pirateName", name);
+const config = {
+	type: Phaser.AUTO,
+	width: (VIEW_RADIUS * 2 + 1) * TILE_SIZE,
+	height: (VIEW_RADIUS * 2 + 1) * TILE_SIZE,
+	parent: "gameContainer",
+	scene: {
+		preload: function () {},
+		create: function () {
+			scene = this;
+			this.input.keyboard.on('keydown', e => {
+				if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+					const dir = e.key.replace("Arrow", "").toLowerCase();
+					socket.emit("move", dir);
+				} else if (e.key === "n") {
+					socket.emit("newWorld");
+				}
+			});
 
-    socket = io();
+			this.input.on('pointerdown', function (pointer) {
+				if (!myId || !scene || !scene.playerPos) return;
 
-    socket.on("connect", () => {
-        socket.emit("register", name);
-    });
+				const me = scene.playerPos;
+				const clickX = pointer.x;
+				const clickY = pointer.y;
 
-    socket.on("gameState", (state) => {
-        players = state;
+				const dx = Math.round((clickX - config.width / 2) / TILE_SIZE);
+				const dy = Math.round((clickY - config.height / 2) / TILE_SIZE);
 
-        for (let id in playerSprites) {
-            if (!players[id]) {
-                playerSprites[id].rect.destroy();
-                playerSprites[id].label.destroy();
-                delete playerSprites[id];
-            }
+				let dir = null;
+				if (Math.abs(dx) > Math.abs(dy)) {
+					dir = dx > 0 ? 'right' : 'left';
+				} else if (Math.abs(dy) > 0) {
+					dir = dy > 0 ? 'down' : 'up';
+				}
+
+				if (dir) {
+					socket.emit("move", dir);
+				}
+			});
+		},
+		update: function () {}
+	}
+};
+
+const game = new Phaser.Game(config);
+
+document.getElementById("startButton").onclick = () => {
+	const name = document.getElementById("nameInput").value;
+	socket.emit("setName", name);
+};
+
+let fireCooldown = false;
+
+document.getElementById("fireButton").onclick = () => {
+    if (fireCooldown) return; // ?? Don't allow firing again during cooldown
+
+    socket.emit("fireCannons"); // ? Fire the cannons
+
+    fireCooldown = true;
+    document.getElementById("fireButton").disabled = true;
+
+    let cooldownTime = 10;
+    const cooldownDisplay = document.getElementById("cooldownDisplay");
+    cooldownDisplay.innerText = `Cooldown: ${cooldownTime}s`;
+
+    const interval = setInterval(() => {
+        cooldownTime--;
+        if (cooldownTime > 0) {
+            cooldownDisplay.innerText = `Cooldown: ${cooldownTime}s`;
+        } else {
+            clearInterval(interval);
+            fireCooldown = false;
+            document.getElementById("fireButton").disabled = false;
+            cooldownDisplay.innerText = "";
         }
+    }, 1000);
+};
 
-        for (let id in players) {
-            const player = players[id];
-            const centerX = player.x * TILE_SIZE + TILE_SIZE / 2;
-            const centerY = player.y * TILE_SIZE + TILE_SIZE / 2;
 
-            if (!playerSprites[id]) {
-                const color = Phaser.Display.Color.RandomRGB();
-                const rect = scene.add.rectangle(centerX, centerY, TILE_SIZE * 0.8, TILE_SIZE * 0.8, color.color);
-                const label = scene.add.text(centerX, centerY - TILE_SIZE / 1.2, player.name, {
-                    fontSize: '12px',
-                    color: '#000'
-                }).setOrigin(0.5);
-                playerSprites[id] = { rect, label };
-            } else {
-                playerSprites[id].rect.x = centerX;
-                playerSprites[id].rect.y = centerY;
-                playerSprites[id].label.x = centerX;
-                playerSprites[id].label.y = centerY - TILE_SIZE / 1.2;
-                playerSprites[id].label.text = player.name;
-            }
-        }
-    });
-
-    const config = {
-        type: Phaser.AUTO,
-        width: TILE_SIZE * MAP_WIDTH,
-        height: TILE_SIZE * MAP_HEIGHT,
-        backgroundColor: '#87CEEB',
-        parent: 'game-container',
-        scene: { create, update }
-    };
-
-    new Phaser.Game(config);
+socket.on("connect", () => {
+	myId = socket.id;
 });
 
-function create() {
-    scene = this;
+socket.on("gameState", (state) => {
+	window.latestGameState = state; 
+	if (!scene) return;
+	scene.children.removeAll();
 
-    this.input.keyboard.on('keydown', (event) => {
-        let dx = 0, dy = 0;
-        switch (event.key) {
-            case 'ArrowUp': dy = -1; break;
-            case 'ArrowDown': dy = 1; break;
-            case 'ArrowLeft': dx = -1; break;
-            case 'ArrowRight': dx = 1; break;
-        }
+	const me = state.players[myId];
+	if (!me) return;
 
-        if (dx || dy) {
-            socket.emit('playerAction', { type: 'move', dx, dy });
-        }
-    });
-}
+	scene.playerPos = { x: me.x, y: me.y };
 
-function update() {}
+	document.getElementById("coordDisplay").innerText = `(${me.x}, ${me.y})`;
+
+	const centerX = config.width / 2;
+	const centerY = config.height / 2;
+
+	const visibleTiles = new Set();
+	// Draw visible blue water tiles with checkerboard pattern
+	for (let dy = -VIEW_RADIUS; dy <= VIEW_RADIUS; dy++) {
+		for (let dx = -VIEW_RADIUS; dx <= VIEW_RADIUS; dx++) {
+			const tx = me.x + dx;
+			const ty = me.y + dy;
+			const key = `${tx},${ty}`;
+			visibleTiles.add(key);
+			//if (!visibleTiles.has(key)) continue;
+			const x = centerX + dx * TILE_SIZE;
+			const y = centerY + dy * TILE_SIZE;
+
+			// Checkerboard: alternate opacity based on tile position
+			const alpha = (tx + ty) % 2 === 0 ? 1.0 : 0.85;
+
++			scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE, 0x3399ff).setOrigin(0.5); // blue water
+			//tile.setAlpha(alpha);
+		}
+	}
+
+
+	for (let island of state.islands) {
+		for (let dx = 0; dx < 2; dx++) {
+			for (let dy = 0; dy < 2; dy++) {
+				const key = `${island.x + dx},${island.y + dy}`;
+				if (!visibleTiles.has(key)) continue;
+				const drawX = centerX + (island.x + dx - me.x) * TILE_SIZE;
+				const drawY = centerY + (island.y + dy - me.y) * TILE_SIZE;
+				scene.add.text(drawX, drawY, "🏝️", {
+					fontSize: TILE_SIZE + "px"
+				}).setOrigin(0.5);
+			}
+		}
+	}
+
+	for (let npc of state.npcShips) {
+		const dx = npc.x - me.x;
+		const dy = npc.y - me.y;
+		if (Math.abs(dx) > VIEW_RADIUS || Math.abs(dy) > VIEW_RADIUS) continue;
+		const x = centerX + dx * TILE_SIZE;
+		const y = centerY + dy * TILE_SIZE;
+		scene.add.text(x, y, "🚢", { fontSize: TILE_SIZE + "px" }).setOrigin(0.5);
+		scene.add.text(x, y - TILE_SIZE * 0.6, npc.type, { fontSize: "16px" }).setOrigin(0.5);
+		scene.add.text(x, y + TILE_SIZE * 0.6, `HP: ${npc.hp}`, { fontSize: "16px", color: "#000" }).setOrigin(0.5);
+		const dist = Math.abs(npc.x - me.x) + Math.abs(npc.y - me.y);
+		if (dist <= 4) {
+			const outline = scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE);
+			outline.setStrokeStyle(4, 0xFF0000);
+			outline.setOrigin(0.5);
+		}
+	}
+
+	for (let id in state.players) {
+		const p = state.players[id];
+		const dx = p.x - me.x;
+		const dy = p.y - me.y;
+		if (Math.abs(dx) > VIEW_RADIUS || Math.abs(dy) > VIEW_RADIUS) continue;
+		const x = centerX + dx * TILE_SIZE;
+		const y = centerY + dy * TILE_SIZE;
+		const color = id === myId ? 0xffffff : 0x888888;
+		scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE, color);
+		scene.add.text(x, y - TILE_SIZE * 0.6, p.name, { fontSize: "16px" }).setOrigin(0.5);
+	}
+});
