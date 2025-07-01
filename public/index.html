@@ -1,26 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Pirate Game</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <title>Treasure Crew</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; text-align: center; }
+        canvas { display: block; margin: 0 auto; }
+        #ui { margin: 10px; }
+    </style>
 </head>
 <body>
-  <input type="text" id="nameInput" placeholder="Enter your pirate name" />
-  <button id="startBtn">Start</button>
-  <div id="game-container"></div>
-
-  <script>
-    window.onload = () => {
-      const savedName = localStorage.getItem("pirateName");
-      if (savedName) {
-        document.getElementById("nameInput").value = savedName;
-      }
-    };
-  </script>
-
-  <script src="game.js"></script>
+    <div id="ui">
+        <input type="text" id="nameInput" placeholder="Enter name">
+        <button id="startButton">Start</button>
+        <button id="fireButton">Fire Cannons</button>
+        <div id="cooldownDisplay"></div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
+
