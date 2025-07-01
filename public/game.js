@@ -1,101 +1,100 @@
 const socket = io();
-const TILE_SIZE = 32;
+const TILE_SIZE = 64;
+const GRID_WIDTH = 100;
+const GRID_HEIGHT = 100;
+const VIEW_RADIUS = 3;
+
 let scene;
-let playerSprites = {};
-let npcSprites = {};
 let myId = null;
 
 const config = {
     type: Phaser.AUTO,
-    width: TILE_SIZE * 40,
-    height: TILE_SIZE * 30,
-    backgroundColor: '#87CEEB',
+    width: 7 * TILE_SIZE,
+    height: 7 * TILE_SIZE,
     scene: {
         preload: function () {},
         create: function () {
             scene = this;
-            this.input.keyboard.on('keydown', e => {
-                if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-                    const dir = e.key.replace("Arrow", "").toLowerCase();
-                    socket.emit("move", dir);
-                } else if (e.key === "n") {
-                    socket.emit("newWorld");
-                }
-            });
+            scene.fogTiles = [];
         },
         update: function () {}
     }
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
 
-socket.on("gameState", state => {
+document.getElementById("startButton").onclick = () => {
+    const name = document.getElementById("nameInput").value;
+    socket.emit("setName", name);
+};
+
+document.getElementById("fireButton").onclick = () => {
+    socket.emit("fireCannons");
+};
+
+socket.on("connect", () => {
     myId = socket.id;
-    for (let id in playerSprites) {
-        playerSprites[id].container.destroy();
+});
+
+socket.on("gameState", (state) => {
+    if (!scene) return;
+    scene.children.removeAll();
+
+    const me = state.players[myId];
+    if (!me) return;
+
+    const centerX = config.width / 2;
+    const centerY = config.height / 2;
+
+    const visibleTiles = new Set();
+    for (let dy = -VIEW_RADIUS; dy <= VIEW_RADIUS; dy++) {
+        for (let dx = -VIEW_RADIUS; dx <= VIEW_RADIUS; dx++) {
+            const tx = me.x + dx;
+            const ty = me.y + dy;
+            visibleTiles.add(`${tx},${ty}`);
+        }
     }
-    playerSprites = {};
+
+    for (let island of state.islands) {
+        for (let dx = 0; dx < 2; dx++) {
+            for (let dy = 0; dy < 2; dy++) {
+                const key = `${island.x + dx},${island.y + dy}`;
+                if (!visibleTiles.has(key)) continue;
+                const drawX = centerX + (island.x + dx - me.x) * TILE_SIZE;
+                const drawY = centerY + (island.y + dy - me.y) * TILE_SIZE;
+                scene.add.text(drawX, drawY, "🏝️", {
+                    fontSize: TILE_SIZE * 2 + "px"
+                }).setOrigin(0.5);
+            }
+        }
+    }
+
+    for (let npc of state.npcShips) {
+        const dx = npc.x - me.x;
+        const dy = npc.y - me.y;
+        if (Math.abs(dx) > VIEW_RADIUS || Math.abs(dy) > VIEW_RADIUS) continue;
+        const x = centerX + dx * TILE_SIZE;
+        const y = centerY + dy * TILE_SIZE;
+        scene.add.text(x, y, "🚢", { fontSize: TILE_SIZE + "px" }).setOrigin(0.5);
+        scene.add.text(x, y - TILE_SIZE * 0.6, npc.type, { fontSize: "8px" }).setOrigin(0.5);
+        scene.add.text(x, y + TILE_SIZE * 0.6, `HP: ${npc.hp}`, { fontSize: "8px", color: "#000" }).setOrigin(0.5);
+        const dist = Math.abs(npc.x - me.x) + Math.abs(npc.y - me.y);
+        if (dist <= 2) {
+            const outline = scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE);
+            outline.setStrokeStyle(2, 0xFF0000);
+            outline.setOrigin(0.5);
+        }
+    }
 
     for (let id in state.players) {
         const p = state.players[id];
-        const x = p.x * TILE_SIZE + TILE_SIZE / 2;
-        const y = p.y * TILE_SIZE + TILE_SIZE / 2;
-        const color = (id === socket.id) ? 0x00ff00 : 0x0000ff;
-        const rect = scene.add.rectangle(0, 0, TILE_SIZE * 0.8, TILE_SIZE * 0.8, color);
-        const label = scene.add.text(0, -TILE_SIZE * 0.6, p.name, { fontSize: '10px', color: '#000' }).setOrigin(0.5);
-        const hp = scene.add.text(0, TILE_SIZE * 0.5, `HP: ${p.hp}`, { fontSize: '8px', color: '#333' }).setOrigin(0.5);
-        const container = scene.add.container(x, y, [rect, label, hp]);
-        playerSprites[id] = { container };
-    }
-
-    for (let id in npcSprites) {
-        npcSprites[id].destroy();
-    }
-    npcSprites = {};
-
-    for (let npc of state.npcShips) {
-        const x = npc.x * TILE_SIZE + TILE_SIZE / 2;
-        const y = npc.y * TILE_SIZE + TILE_SIZE / 2;
-        const body = scene.add.rectangle(x, y, TILE_SIZE * 0.9, TILE_SIZE * 0.9, 0x555555);
-        const label = scene.add.text(x, y - TILE_SIZE * 0.9, npc.type, { fontSize: '10px', color: '#fff' }).setOrigin(0.5);
-        const hp = scene.add.text(x, y + TILE_SIZE * 0.6, `HP: ${npc.hp}`, { fontSize: '8px', color: '#ccc' }).setOrigin(0.5);
-        const group = scene.add.container(0, 0, [body, label, hp]);
-        npcSprites[npc.id] = group;
+        const dx = p.x - me.x;
+        const dy = p.y - me.y;
+        if (Math.abs(dx) > VIEW_RADIUS || Math.abs(dy) > VIEW_RADIUS) continue;
+        const x = centerX + dx * TILE_SIZE;
+        const y = centerY + dy * TILE_SIZE;
+        const color = id === myId ? 0xffffff : 0x888888;
+        scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE, color);
+        scene.add.text(x, y - TILE_SIZE * 0.6, p.name, { fontSize: "8px" }).setOrigin(0.5);
     }
 });
-
-document.getElementById("startButton").addEventListener("click", () => {
-    const name = document.getElementById("nameInput").value.trim();
-    if (name) {
-        socket.emit("setName", name);
-        document.getElementById("startButton").innerText = "Rename";
-    }
-});
-
-const fireButton = document.getElementById("fireButton");
-const cooldownDisplay = document.getElementById("cooldownDisplay");
-let canFire = true;
-let cooldownTimer = null;
-
-fireButton.addEventListener("click", () => {
-    if (!canFire) return;
-    socket.emit("fireCannons");
-
-    canFire = false;
-    fireButton.disabled = true;
-    let remaining = 10;
-    cooldownDisplay.textContent = `Reloading... ${remaining}s`;
-
-    cooldownTimer = setInterval(() => {
-        remaining--;
-        if (remaining <= 0) {
-            clearInterval(cooldownTimer);
-            fireButton.disabled = false;
-            cooldownDisplay.textContent = "";
-            canFire = true;
-        } else {
-            cooldownDisplay.textContent = `Reloading... ${remaining}s`;
-        }
-    }, 1000);
-});
-

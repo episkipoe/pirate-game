@@ -1,5 +1,5 @@
-const GRID_WIDTH = 40;
-const GRID_HEIGHT = 30;
+const GRID_WIDTH = 80;
+const GRID_HEIGHT = 80;
 
 module.exports = function createGame(io) {
     const players = {};
