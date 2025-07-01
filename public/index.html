@@ -7,6 +7,12 @@
         body { margin: 0; font-family: sans-serif; text-align: center; }
         canvas { display: block; margin: 0 auto; }
         #ui { margin: 10px; }
+        #controls button {
+            font-size: 2em;
+            margin: 5px;
+            width: 60px;
+            height: 60px;
+        }
     </style>
 </head>
 <body>
@@ -16,25 +22,25 @@
         <button id="fireButton">Fire Cannons</button>
         <div id="cooldownDisplay"></div>
     </div>
+
     <div id="controls" style="margin-top: 10px;">
-	    <div style="display: flex; justify-content: center;">
-		    <button onclick="move('up')">⬆️</button>
-	    </div>
-	    <div style="display: flex; justify-content: center;">
-		    <button onclick="move('left')">⬅️</button>
-		    <button onclick="move('down')">⬇️</button>
-		    <button onclick="move('right')">➡️</button>
-	    </div>
+        <div style="display: flex; justify-content: center;">
+            <button onclick="move('up')">⬆️</button>
+        </div>
+        <div style="display: flex; justify-content: center;">
+            <button onclick="move('left')">⬅️</button>
+            <button onclick="move('down')">⬇️</button>
+            <button onclick="move('right')">➡️</button>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <script src="game.js"></script>
     <script>
-	    function move(direction) {
-		    socket.emit("move", direction);
-	    }
+      function move(direction) {
+        socket.emit("move", direction);
+      }
     </script>
-
 </body>
 </html>

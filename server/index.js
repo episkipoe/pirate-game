@@ -6,6 +6,7 @@ const createGame = require("./game");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
 const game = createGame(io);
 
 app.use(express.static("public"));
@@ -19,7 +20,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("move", dir => {
-        game.handleAction(socket.id, dir);
+        game.movePlayer(socket.id, dir);
     });
 
     socket.on("newWorld", () => {
@@ -27,26 +28,7 @@ io.on("connection", (socket) => {
     });
 
     socket.on("fireCannons", () => {
-        const player = game.players[socket.id];
-        if (!player) return;
-        const { x, y } = player;
-        const adjacent = [
-            { dx: -1, dy: 0 },
-            { dx: 1, dy: 0 },
-            { dx: 0, dy: -1 },
-            { dx: 0, dy: 1 }
-        ];
-        for (let { dx, dy } of adjacent) {
-            const npc = game.npcShips.find(n => n.x === x + dx && n.y === y + dy);
-            if (npc) {
-                npc.hp -= 20;
-                if (npc.hp <= 0) {
-                    game.npcShips = game.npcShips.filter(n => n.id !== npc.id);
-                }
-                break;
-            }
-        }
-        game.broadcastState();
+        game.playerFire(socket.id);
     });
 
     socket.on("disconnect", () => {
@@ -56,5 +38,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(3000, () => {
-    console.log("Server listening on http://localhost:3000");
+    console.log("Server running at http://localhost:3000");
 });

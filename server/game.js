@@ -1,88 +1,61 @@
-const crypto = require("crypto");
+const GRID_WIDTH = 40;
+const GRID_HEIGHT = 30;
 
 module.exports = function createGame(io) {
     const players = {};
-    const sockets = {};
-    const treasures = {};
-    const islands = new Set();
-    const npcShips = [];
+    let islands = [];
+    let npcShips = [];
 
-    function randomId() {
-        return crypto.randomUUID();
+    function randomCoord() {
+        return {
+            x: Math.floor(Math.random() * GRID_WIDTH),
+            y: Math.floor(Math.random() * GRID_HEIGHT)
+        };
     }
 
-    function generateIslands(count = 30, size = 3) {
-        islands.clear();
+    function generateIslands(count = 20) {
+        islands = [];
         for (let i = 0; i < count; i++) {
-            const baseX = Math.floor(Math.random() * 40);
-            const baseY = Math.floor(Math.random() * 30);
-            for (let dx = 0; dx < size; dx++) {
-                for (let dy = 0; dy < size; dy++) {
-                    islands.add(`${baseX + dx},${baseY + dy}`);
-                }
-            }
+            islands.push(randomCoord());
         }
     }
 
-    function spawnTreasure() {
-        let x, y, key, attempts = 0;
-        do {
-            x = Math.floor(Math.random() * 40);
-            y = Math.floor(Math.random() * 30);
-            key = `${x},${y}`;
-            attempts++;
-        } while (
-            treasures[key] ||
-            islands.has(key) ||
-            Object.values(players).some(p => p.x === x && p.y === y)
-        );
-        treasures[key] = { x, y };
-    }
-
-    function spawnNpcShips(count = 5) {
-        npcShips.length = 0;
-        const types = ["fishing boat", "galleon", "sloop", "brigantine", "frigate", "man-of-war"];
+    function generateNPCs(count = 10) {
+        const types = ["sloop", "brigantine", "frigate", "fishing boat", "galleon"];
+        const hpByType = {
+            "sloop": 40, "brigantine": 60, "frigate": 80,
+            "fishing boat": 20, "galleon": 100
+        };
+        npcShips = [];
         for (let i = 0; i < count; i++) {
             const type = types[Math.floor(Math.random() * types.length)];
-            let x, y;
-            do {
-                x = Math.floor(Math.random() * 40);
-                y = Math.floor(Math.random() * 30);
-            } while (islands.has(`${x},${y}`));
-            npcShips.push(createNpcShip(type, x, y));
+            npcShips.push({
+                id: "npc_" + Date.now() + "_" + i,
+                ...randomCoord(),
+                type,
+                hp: hpByType[type]
+            });
         }
     }
 
-    function createNpcShip(type, x, y) {
-        const base = { id: randomId(), type, x, y, name: type };
-        switch (type) {
-            case "fishing boat": return { ...base, hp: 20, speed: 1 };
-            case "galleon": return { ...base, hp: 100, cannons: 20, speed: 1 };
-            case "sloop": return { ...base, hp: 40, speed: 3 };
-            case "brigantine": return { ...base, hp: 60, cannons: 4, speed: 2 };
-            case "frigate": return { ...base, hp: 90, cannons: 14, speed: 2 };
-            case "man-of-war": return { ...base, hp: 150, cannons: 40, speed: 1 };
-            default: return { ...base, hp: 50 };
-        }
+    function broadcastState() {
+        io.emit("gameState", {
+            players,
+            islands,
+            npcShips
+        });
     }
 
     function addPlayer(socket, name) {
         players[socket.id] = {
             id: socket.id,
             name,
-            x: Math.floor(Math.random() * 40),
-            y: Math.floor(Math.random() * 30),
-            score: 0,
+            x: Math.floor(GRID_WIDTH / 2),
+            y: Math.floor(GRID_HEIGHT / 2),
             hp: 100,
-            cannons: [{ shotType: "standard" }, { shotType: "explosive" }],
-            crew: [
-                { name: "One-Eyed Pete", role: "Gunner" },
-                { name: "Limping Lucy", role: "Navigator" },
-                { name: "Salty Sam", role: "Cook" }
-            ]
+            cannons: [],
+            crew: []
         };
-        sockets[socket.id] = socket;
-        spawnTreasure();
         broadcastState();
     }
 
@@ -95,39 +68,39 @@ module.exports = function createGame(io) {
 
     function removePlayer(id) {
         delete players[id];
-        delete sockets[id];
         broadcastState();
     }
 
-    function handleAction(id, dir) {
-        const player = players[id];
-        if (!player) return;
+    function movePlayer(id, dir) {
+        const p = players[id];
+        if (!p) return;
+        if (dir === "left") p.x = Math.max(0, p.x - 1);
+        if (dir === "right") p.x = Math.min(GRID_WIDTH - 1, p.x + 1);
+        if (dir === "up") p.y = Math.max(0, p.y - 1);
+        if (dir === "down") p.y = Math.min(GRID_HEIGHT - 1, p.y + 1);
 
-        const deltas = {
-            up: { dx: 0, dy: -1 },
-            down: { dx: 0, dy: 1 },
-            left: { dx: -1, dy: 0 },
-            right: { dx: 1, dy: 0 }
-        };
+        for (let island of islands) {
+            const dx = Math.abs(island.x - p.x);
+            const dy = Math.abs(island.y - p.y);
+            if (dx < 2 && dy < 2) {
+                // simulate a randomEvent()
+            }
+        }
 
-        const move = deltas[dir];
-        if (!move) return;
+        broadcastState();
+    }
 
-        const newX = player.x + move.dx;
-        const newY = player.y + move.dy;
-        const key = `${newX},${newY}`;
-
-        if (newX >= 0 && newX < 40 && newY >= 0 && newY < 30) {
-            if (islands.has(key)) {
-                sockets[id].emit("eventMessage", "A storm pushed you back!");
-            } else {
-                player.x = newX;
-                player.y = newY;
-                if (treasures[key]) {
-                    delete treasures[key];
-                    player.score += 1;
-                    spawnTreasure();
+    function playerFire(id) {
+        const p = players[id];
+        if (!p) return;
+        for (let npc of npcShips) {
+            const dist = Math.abs(npc.x - p.x) + Math.abs(npc.y - p.y);
+            if (dist <= 2) {
+                npc.hp -= 20;
+                if (npc.hp <= 0) {
+                    npcShips = npcShips.filter(n => n.id !== npc.id);
                 }
+                break;
             }
         }
         broadcastState();
@@ -135,40 +108,58 @@ module.exports = function createGame(io) {
 
     function resetWorld() {
         generateIslands();
-        spawnNpcShips();
-        for (const id in players) {
-            players[id].x = Math.floor(Math.random() * 40);
-            players[id].y = Math.floor(Math.random() * 30);
-        }
-        for (const key in treasures) delete treasures[key];
-        for (let i = 0; i < 10; i++) spawnTreasure();
+        generateNPCs();
         broadcastState();
     }
 
-    function broadcastState() {
-        const state = {
-            players,
-            treasures: Object.values(treasures),
-            islands: Array.from(islands).map(s => {
-                const [x, y] = s.split(',').map(Number);
-                return { x, y };
-            }),
-            npcShips
-        };
-        for (const id in sockets) {
-            sockets[id].emit("gameState", state);
+    setInterval(() => {
+        for (let npc of npcShips) {
+            const dir = ["left", "right", "up", "down"][Math.floor(Math.random() * 4)];
+            if (dir === "left") npc.x = Math.max(0, npc.x - 1);
+            if (dir === "right") npc.x = Math.min(GRID_WIDTH - 1, npc.x + 1);
+            if (dir === "up") npc.y = Math.max(0, npc.y - 1);
+            if (dir === "down") npc.y = Math.min(GRID_HEIGHT - 1, npc.y + 1);
         }
-    }
+        broadcastState();
+    }, 5000);
+
+    setInterval(() => {
+        for (let npc of npcShips) {
+            for (let id in players) {
+                const p = players[id];
+                const dist = Math.abs(npc.x - p.x) + Math.abs(npc.y - p.y);
+                if (dist <= 2) {
+                    p.hp -= 10;
+                    if (p.hp < 0) p.hp = 0;
+                }
+            }
+        }
+        broadcastState();
+    }, 10000);
+
+    setInterval(() => {
+        if (npcShips.length < 10) {
+            const type = ["sloop", "brigantine", "frigate", "fishing boat", "galleon"][Math.floor(Math.random() * 5)];
+            const hp = { sloop: 40, brigantine: 60, frigate: 80, "fishing boat": 20, galleon: 100 }[type];
+            npcShips.push({ id: "npc_" + Date.now(), ...randomCoord(), type, hp });
+            broadcastState();
+        }
+    }, 60000);
+
+    resetWorld();
 
     return {
+        players,
+        islands,
+        npcShips,
         addPlayer,
         updatePlayerName,
+        movePlayer,
         removePlayer,
-        handleAction,
         resetWorld,
+        playerFire,
         broadcastState,
-        players,
-        npcShips
+        width: GRID_WIDTH,
+        height: GRID_HEIGHT
     };
 };
-

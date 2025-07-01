@@ -1,11 +1,5 @@
-
 const socket = io();
-const TILE_SIZE = 16;
-const GRID_WIDTH = 40;
-const GRID_HEIGHT = 30;
-const WIDTH = TILE_SIZE * GRID_WIDTH;
-const HEIGHT = TILE_SIZE * GRID_HEIGHT;
-
+const TILE_SIZE = 32;
 let scene;
 let playerSprites = {};
 let npcSprites = {};
@@ -13,8 +7,8 @@ let myId = null;
 
 const config = {
     type: Phaser.AUTO,
-    width: WIDTH,
-    height: HEIGHT,
+    width: TILE_SIZE * 40,
+    height: TILE_SIZE * 30,
     backgroundColor: '#87CEEB',
     scene: {
         preload: function () {},
@@ -36,9 +30,7 @@ const config = {
 new Phaser.Game(config);
 
 socket.on("gameState", state => {
-
     myId = socket.id;
-
     for (let id in playerSprites) {
         playerSprites[id].container.destroy();
     }
@@ -48,25 +40,13 @@ socket.on("gameState", state => {
         const p = state.players[id];
         const x = p.x * TILE_SIZE + TILE_SIZE / 2;
         const y = p.y * TILE_SIZE + TILE_SIZE / 2;
-        const color = (id === socket.id) ? 0xFFFFFF : 0x808080;
+        const color = (id === socket.id) ? 0x00ff00 : 0x0000ff;
         const rect = scene.add.rectangle(0, 0, TILE_SIZE * 0.8, TILE_SIZE * 0.8, color);
         const label = scene.add.text(0, -TILE_SIZE * 0.6, p.name, { fontSize: '10px', color: '#000' }).setOrigin(0.5);
         const hp = scene.add.text(0, TILE_SIZE * 0.5, `HP: ${p.hp}`, { fontSize: '8px', color: '#333' }).setOrigin(0.5);
         const container = scene.add.container(x, y, [rect, label, hp]);
         playerSprites[id] = { container };
     }
-
-    if (scene.islandSprites) {
-        scene.islandSprites.forEach(c => c.destroy());
-    }
-    scene.islandSprites = state.islands.map(({ x, y }) =>
-        scene.add.text(
-            x * TILE_SIZE + TILE_SIZE / 4,
-            y * TILE_SIZE + TILE_SIZE / 4,
-            "🏝️",
-            { fontSize: `${TILE_SIZE}px` }
-        )
-    );
 
     for (let id in npcSprites) {
         npcSprites[id].destroy();
@@ -76,12 +56,10 @@ socket.on("gameState", state => {
     for (let npc of state.npcShips) {
         const x = npc.x * TILE_SIZE + TILE_SIZE / 2;
         const y = npc.y * TILE_SIZE + TILE_SIZE / 2;
-        const npcEmoji = scene.add.text(x - TILE_SIZE / 3, y - TILE_SIZE / 3, "🚢", {
-            fontSize: `${TILE_SIZE}px`
-        });
+        const body = scene.add.rectangle(x, y, TILE_SIZE * 0.9, TILE_SIZE * 0.9, 0x555555);
         const label = scene.add.text(x, y - TILE_SIZE * 0.9, npc.type, { fontSize: '10px', color: '#fff' }).setOrigin(0.5);
         const hp = scene.add.text(x, y + TILE_SIZE * 0.6, `HP: ${npc.hp}`, { fontSize: '8px', color: '#ccc' }).setOrigin(0.5);
-        const group = scene.add.container(0, 0, [npcEmoji, label, hp]);
+        const group = scene.add.container(0, 0, [body, label, hp]);
         npcSprites[npc.id] = group;
     }
 });
@@ -120,3 +98,4 @@ fireButton.addEventListener("click", () => {
         }
     }, 1000);
 });
+
