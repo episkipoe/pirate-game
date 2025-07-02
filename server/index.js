@@ -11,7 +11,7 @@ http.listen(PORT, () => {
     console.log("Server started on port", PORT);
 });
 
-game.initWorld();
+game.initWorld(io);
 
 setInterval(() => {
     game.updateNPCs();
@@ -43,4 +43,8 @@ io.on("connection", (socket) => {
         game.fireCannons(socket.id);
         io.emit("gameState", game.getState());
     });
-};
+
+    socket.on("newWorld", () => {
+        game.initWorld(io);
+    });
+});

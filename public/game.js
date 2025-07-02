@@ -169,3 +169,20 @@ socket.on("gameState", (state) => {
 		scene.add.text(x, y - TILE_SIZE * 0.6, p.name, { fontSize: "16px" }).setOrigin(0.5);
 	}
 });
+
+socket.on("shotResult", ({ damage, missed, targetType }) => {
+	const div = document.getElementById("shotResultDisplay");
+	if (targetType == "none") {
+		div.innerText = `x`;
+	} if (missed) {
+		div.innerText = `You missed the ${targetType}!`;
+	} else {
+		div.innerText = `Hit the ${targetType} for ${damage} damage!`;
+	}
+
+	// Clear after 10 seconds
+	setTimeout(() => {
+		div.innerText = "";
+	}, 10000);
+});
+
