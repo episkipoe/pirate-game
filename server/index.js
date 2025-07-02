@@ -43,4 +43,4 @@ io.on("connection", (socket) => {
         game.fireCannons(socket.id);
         io.emit("gameState", game.getState());
     });
-});
+};
