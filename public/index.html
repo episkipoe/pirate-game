@@ -1,24 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Treasure Crew</title>
-    <style>
-        body { margin: 0; font-family: sans-serif; text-align: center; }
-        canvas { display: block; margin: 0 auto; }
-        #ui { margin: 10px; }
-    </style>
-</head>
-<body>
-    <div id="ui">
-        <input type="text" id="nameInput" placeholder="Enter name">
-        <button id="startButton">Start</button>
-        <button id="fireButton">Fire Cannons</button>
-        <div id="cooldownDisplay"></div>
-    </div>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<title>Treasure Crew</title>
+		<style>
+body, html {
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	height: 100%;
+	font-family: sans-serif;
+	text-align: center;
+	background-color: #001e3c;
+	touch-action: manipulation;
+}
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <script src="game.js"></script>
-</body>
+    #ui, #fireUI {
+	    margin-top: 10px;
+    }
+
+    #coordDisplay {
+	    margin-top: 10px;
+	    font-size: 18px;
+	    color: white;
+    }
+
+    input, button {
+	    font-size: 16px;
+	    padding: 6px 12px;
+	    margin: 4px;
+    }
+
+    canvas {
+	    display: block;
+	    margin: 0 auto;
+	    touch-action: manipulation;
+    }
+		</style>
+	</head>
+	<body>
+		<div id="start">
+			<input type="text" id="nameInput" placeholder="Enter name">
+			<button id="startButton">Start</button>
+			<div id="gameContainer"/>
+		</div>
+		<div id="ui">
+			<button id="fireButton">Fire Cannons</button>
+			<div id="cooldownDisplay"></div>
+		</div>
+		<div id="coordDisplay" style="margin-top: 10px; font-size: 18px;"></div>
+
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+		<script src="game.js"></script>
+
+	</body>
 </html>

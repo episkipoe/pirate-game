@@ -70,7 +70,7 @@ function fireCannons(id) {
     for (const npc of npcShips) {
         const dx = Math.abs(npc.x - player.x);
         const dy = Math.abs(npc.y - player.y);
-        if (dx + dy <= 2) {
+        if (dx + dy <= 4) {
             npc.hp -= 10;
         }
     }
