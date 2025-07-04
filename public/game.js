@@ -1,15 +1,15 @@
 const socket = io();
-const TILE_SIZE = 50;
+const TILE_SIZE = 45;
 const EXPLOSION_SIZE = 40
-const VIEW_RADIUS = 10;
+const VIEW_RADIUS = 12;
 
 let scene;
 let myId = null;
 
 const config = {
 	type: Phaser.AUTO,
-	width: (VIEW_RADIUS * 2 + 1) * TILE_SIZE,
-	height: (VIEW_RADIUS * 2 + 1) * TILE_SIZE,
+	width: window.innerWidth,
+	height: window.innerHeight,
 	parent: "gameContainer",
 	scene: {
 		preload: function () {},
@@ -64,11 +64,7 @@ socket.on("connect", () => {
 });
 
 
-function getShipStatus(ship) {
-	return "Cannons: " + ship.cannon.count + " Crew: " + ship.crew.count;
-}
-
-function getConnonCooldown(cannon) {
+function getCannonCooldown(cannon) {
 	return cannon.cooldown > 0 ? "Cannons reloading: " + cannon.cooldown : "Cannons ready to fire"
 }
 
@@ -86,6 +82,21 @@ function getServerGoldStatus(state) {
 	return "Total gold: " + total + "(" + richest.name + ")";
 }
 
+function updateHUD(player) {
+	const hud = document.getElementById("hud");
+	if (!player || !player.ship) return;
+
+	const cannonCount = player.ship.cannon.count;
+	const crewCount = player.ship.crew.count;
+	const gold = player.ship.gold;
+	const xp = player.xp || 0;
+
+	let text = ''
+	text += `💰 Gold: ${gold}\n⭐ XP: ${xp}`;
+	text += `\n🧔 Crew: ${crewCount}\n💣 Cannons: ${cannonCount}`;
+
+	hud.innerText = text;
+}
 
 
 socket.on("gameState", (state) => {
@@ -100,11 +111,9 @@ socket.on("gameState", (state) => {
 	scene.playerPos = { x: ship.x, y: ship.y };
 
 	document.getElementById("coordDisplay").innerText = `(${ship.x}, ${ship.y})`;
-	document.getElementById("goldDisplay").innerText = `💰 Gold: ${ship.gold || 0}`;
-	document.getElementById("xpDisplay").innerText = `⭐ XP: ${me.xp || 0}`;
-	document.getElementById("shipStatus").innerText = getShipStatus(ship);
-	document.getElementById("cooldownDisplay").innerText = getConnonCooldown(ship.cannon);
+	document.getElementById("cannonCooldown").innerText = getCannonCooldown(ship.cannon);
 	document.getElementById("serverGold").innerText = getServerGoldStatus(state);
+	updateHUD(me);
 	
 	const centerX = config.width / 2;
 	const centerY = config.height / 2;

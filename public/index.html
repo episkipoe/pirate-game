@@ -43,21 +43,22 @@ body, html {
 	    z-index: 10;
     }
 
-
-    #cooldownDisplay {
-	    color: white;
-    }
-    #shotResultDisplay {
+    #hud {
 	    position: absolute;
-	    bottom: 80px;
-	    width: 100%;
-	    text-align: center;
+	    top: 10px;
+	    left: 20px;
+	    background-color: rgba(0, 0, 0, 0.6);
+	    color: white;
 	    font-size: 20px;
-	    color:white;
-	    text-shadow: 1px 1px 3px #000;
-	    z-index: 15;
+	    padding: 10px 16px;
+	    border-radius: 10px;
+	    font-family: sans-serif;
 	    pointer-events: none;
+	    z-index: 1000;
+	    white-space: pre-line; 
+	    text-align: left;
     }
+
 
     #goldDisplay {
 	    position: absolute;
@@ -67,6 +68,7 @@ body, html {
 	    font-size: 30px;
 	    font-weight: bold;
 	    text-shadow: 1px 1px 2px #000; /* makes it pop against blue background */
+	    pointer-events: none; 
 	    z-index: 10;
     }
 
@@ -78,18 +80,41 @@ body, html {
 	    font-size: 30px;
 	    font-weight: bold;
 	    text-shadow: 1px 1px 2px #000; /* makes it pop against blue background */
+	    pointer-events: none; 
+	    z-index: 10;
+    }
+
+    #cannonCooldown {
+	    position: absolute;
+	    bottom: 10px;
+	    left: 50%;
+	    transform: translateX(-50%);
+	    background-color: rgba(0, 0, 0, 0.6);
+	    color: white;
+	    font-size: 20px;
+	    padding: 6px 16px;
+	    border-radius: 10px;
+	    font-family: sans-serif;
+	    pointer-events: none; 
 	    z-index: 10;
     }
 
     #message {
-	    color: white;
-    }
-
-    #shipStatus {
+	    position: absolute;
+	    bottom: 40px;
+	    left: 50%;
+	    transform: translateX(-50%);
+	    background-color: rgba(0, 0, 0, 0.6);
 	    color: white;
 	    font-size: 20px;
-	    font-weight: bold;
+	    padding: 6px 16px;
+	    border-radius: 10px;
+	    font-family: sans-serif;
+	    pointer-events: none; 
+	    z-index: 10;
     }
+
+
     input, button {
 	    font-size: 16px;
 	    padding: 6px 12px;
@@ -112,15 +137,9 @@ body, html {
 		<div id="coordDisplay"></div>
 		<div id="serverGold"></div>
 		
-		<div id="hud" style="position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; white-space: nowrap">
-			<div id="goldDisplay"></div>
-			<div id="xpDisplay"></div>
-		</div>
-		<div id="shipStatus"></div>
-		<div id="ui">
-			<div id="cooldownDisplay"></div>
-		</div>
+		<div id="hud"></div>
 		<div id="message"></div>
+		<div id="cannonCooldown"></div>
 
 		<script src="/socket.io/socket.io.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
