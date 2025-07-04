@@ -1,6 +1,6 @@
 const socket = io();
 const TILE_SIZE = 50;
-const EXPLOSION_SIZE = 12
+const EXPLOSION_SIZE = 40
 const VIEW_RADIUS = 10;
 
 let scene;
@@ -63,37 +63,13 @@ socket.on("connect", () => {
 	myId = socket.id;
 });
 
-let fireCooldown = false;
-
-document.getElementById("fireButton").onclick = () => {
-	if (fireCooldown) return; // ?? Don't allow firing again during cooldown
-	const me = state.players[myId];
-	if (me.sunk) return;
-
-	socket.emit("fireCannons"); // ? Fire the cannons
-
-	fireCooldown = true;
-	document.getElementById("fireButton").disabled = true;
-
-	let cooldownTime = 10;
-	const cooldownDisplay = document.getElementById("cooldownDisplay");
-	cooldownDisplay.innerText = `Cooldown: ${cooldownTime}s`;
-
-	const interval = setInterval(() => {
-		cooldownTime--;
-		if (cooldownTime > 0) {
-			cooldownDisplay.innerText = `Cooldown: ${cooldownTime}s`;
-		} else {
-			clearInterval(interval);
-			fireCooldown = false;
-			document.getElementById("fireButton").disabled = false;
-			cooldownDisplay.innerText = "";
-		}
-	}, 1000);
-};
 
 function getShipStatus(ship) {
 	return "Cannons: " + ship.cannon.count + " Crew: " + ship.crew.count;
+}
+
+function getConnonCooldown(cannon) {
+	return cannon.cooldown > 0 ? "Cannons reloading: " + cannon.cooldown : "Cannons ready to fire"
 }
 
 function getServerGoldStatus(state) {
@@ -127,8 +103,9 @@ socket.on("gameState", (state) => {
 	document.getElementById("goldDisplay").innerText = `💰 Gold: ${ship.gold || 0}`;
 	document.getElementById("xpDisplay").innerText = `⭐ XP: ${me.xp || 0}`;
 	document.getElementById("shipStatus").innerText = getShipStatus(ship);
+	document.getElementById("cooldownDisplay").innerText = getConnonCooldown(ship.cannon);
 	document.getElementById("serverGold").innerText = getServerGoldStatus(state);
-
+	
 	const centerX = config.width / 2;
 	const centerY = config.height / 2;
 
@@ -215,7 +192,6 @@ socket.on("gameState", (state) => {
 			backgroundColor: "rgba(0, 0, 0, 0.5)",
 			align: "center",
 		}).setOrigin(0.5);
-
 		if (state.players[id].sunk) {
 			scene.add.text(x, y, "👻", { fontSize: TILE_SIZE + "px" }).setOrigin(0.5);
 		} else {

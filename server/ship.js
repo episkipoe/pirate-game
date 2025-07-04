@@ -46,6 +46,7 @@ class Ship {
 		this.hp = ship.hp;
 		this.crew.count = ship.crew;
 		this.cannon = new Cannon(...ship.cannon); // count, shotType
+		this.cannon.cooldownTime = 15
 		this.gold = ship.gold[0] + Math.floor(Math.random() * (ship.gold[1] - ship.gold[0] + 1));
 		
 	}
@@ -55,7 +56,15 @@ class Ship {
 		this.hit--;
 	}
 
-	shoot(dmg) {
+	fire() {
+		let baseDamage = 1;
+		if (this.crew.count > 10) {
+			baseDamage = Math.floor(this.crew.count * 0.1);
+		} 
+		return this.cannon.fire(baseDamage)
+	}
+
+	getHitFor(dmg) {
 		if (this.hit > 0) {
 			dmg = Math.floor(dmg * 1.5)
 		}

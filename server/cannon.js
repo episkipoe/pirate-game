@@ -4,15 +4,11 @@ class Cannon {
 		this.shotType = shotType;
 		this.range = 4;
 		this.cooldown = 0;
-		this.cooldownTime = 15;
+		this.cooldownTime = 5;
 	}
 
-	fire() {
-		const base = {
-			standard: 10,
-			chain: 7,
-			grape: 5
-		}[this.shotType] || 10;
+	fire(modifier) {
+		const base = modifier;
 
 		let total = 0;
 		for (let i = 0; i < this.count; i++) {

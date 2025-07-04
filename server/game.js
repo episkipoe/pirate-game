@@ -3,12 +3,12 @@ const Ship = require("./ship");
 const Island = require("./island");
 
 
-const GRID_WIDTH = 255;
-const GRID_HEIGHT = 255;
+const GRID_WIDTH = 300;
+const GRID_HEIGHT = 300;
 
-const N_ISLANDS = 208;
+const N_ISLANDS = 400;
 const N_NPCS = 120;
-const MAX_NPCS = 44;
+const MAX_NPCS = 255;
 
 let io;
 
@@ -75,8 +75,6 @@ function fireCannons(id) {
 		const dy = Math.abs(npc.y - ship.y);
 		if (dx + dy <= ship.cannon.range) {
 			dmg = ship.cannon.fire();
-			booty = npc.shoot(dmg)
-			players[id].pickup(booty)
 
 			io.to(id).emit("shotResult", {
 				damage: dmg,
@@ -114,7 +112,7 @@ function updateNPCs() {
 			const dx = Math.abs(npc.x - p.x);
 			const dy = Math.abs(npc.y - p.y);
 			if (npc.cannon.canFire(dx + dy)) {
-				p.hp -= npc.cannon.fire();
+				p.getHitFor(npc.fire());
 
 				if (p.hp <= 0) {
 					io.to(id).emit("message", "Your ship has been sunk!");
@@ -128,6 +126,11 @@ function updateNPCs() {
 						io.to(id).emit("message", "Welcome back!.");
 					}, 10000);
 				}
+			}
+
+			if (p.cannon.canFire(dx + dy)) {
+				const booty = npc.getHitFor(p.fire())
+				players[id].pickup(booty)
 			}
 		}
 	}

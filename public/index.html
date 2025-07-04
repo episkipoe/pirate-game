@@ -87,6 +87,8 @@ body, html {
 
     #shipStatus {
 	    color: white;
+	    font-size: 20px;
+	    font-weight: bold;
     }
     input, button {
 	    font-size: 16px;
@@ -115,12 +117,10 @@ body, html {
 			<div id="xpDisplay"></div>
 		</div>
 		<div id="shipStatus"></div>
-		<div id="message"></div>
 		<div id="ui">
-			<button id="fireButton">Fire Cannons</button>  
-			<div id="shotResultDisplay"></div>
 			<div id="cooldownDisplay"></div>
 		</div>
+		<div id="message"></div>
 
 		<script src="/socket.io/socket.io.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
