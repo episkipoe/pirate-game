@@ -14,7 +14,7 @@ http.listen(PORT, () => {
 game.initWorld(io);
 
 setInterval(() => {
-    game.updateNPCs();
+    game.tick();
     io.emit("gameState", game.getState());
 }, 1000);
 
@@ -47,4 +47,9 @@ io.on("connection", (socket) => {
     socket.on("newWorld", () => {
         game.initWorld(io);
     });
+
+    socket.on("die", () => {
+        game.die(socket.id);
+    });
+
 });

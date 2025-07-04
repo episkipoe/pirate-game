@@ -1,11 +1,13 @@
+const Player = require("./player");
 const Ship = require("./ship");
+const Island = require("./island");
 
 
 const GRID_WIDTH = 255;
 const GRID_HEIGHT = 255;
 
-const N_ISLANDS = 128;
-const N_NPCS = 22;
+const N_ISLANDS = 208;
+const N_NPCS = 120;
 const MAX_NPCS = 44;
 
 let io;
@@ -19,7 +21,7 @@ function randomInt(max) {
 }
 
 function createIsland() {
-	return { x: randomInt(GRID_WIDTH - 2), y: randomInt(GRID_HEIGHT - 2) };
+	return new Island(randomInt(GRID_WIDTH - 2), randomInt(GRID_HEIGHT - 2));
 }
 
 function createNPC(id) {
@@ -37,8 +39,14 @@ function initWorld(ioParam) {
 	for (let i = 0; i < N_NPCS; i++) npcShips.push(createNPC(i)); 
 }
 
+function die(id) {
+	console.log("Sink: " + id)
+	players[id].sunk = true
+}
+
+
 function addPlayer(id) {
-	players[id] = new Ship(id, randomInt(GRID_WIDTH), randomInt(GRID_HEIGHT));
+	players[id] = new Player(new Ship(id, randomInt(GRID_WIDTH), randomInt(GRID_HEIGHT)));
 
 }
 
@@ -47,7 +55,7 @@ function removePlayer(id) {
 }
 
 function movePlayer(id, dir) {
-	const p = players[id];
+	const p = players[id].ship;
 	if (!p) return;
 	if (dir === "left") p.x = Math.max(0, p.x - 1);
 	if (dir === "right") p.x = Math.min(GRID_WIDTH - 1, p.x + 1);
@@ -56,23 +64,25 @@ function movePlayer(id, dir) {
 }
 
 function setPlayerName(id, name) {
-	if (players[id]) players[id].name = name;
+	if (players[id]) players[id].ship.name = name;
 }
 
 function fireCannons(id) {
-	const player = players[id];
-	if (!player) return;
+	const ship = players[id].ship;
+	if (!ship || players[id].sunk) return;
 	for (const npc of npcShips) {
-		const dx = Math.abs(npc.x - player.x);
-		const dy = Math.abs(npc.y - player.y);
-		if (dx + dy <= player.cannon.range) {
-			dmg = player.cannon.getDamage();
-			npc.hp -= dmg
+		const dx = Math.abs(npc.x - ship.x);
+		const dy = Math.abs(npc.y - ship.y);
+		if (dx + dy <= ship.cannon.range) {
+			dmg = ship.cannon.fire();
+			booty = npc.shoot(dmg)
+			players[id].pickup(booty)
 
 			io.to(id).emit("shotResult", {
 				damage: dmg,
 				missed: dmg === 0,
 				targetType: npc.type,
+				booty: booty
 			});
 
 			return;
@@ -83,9 +93,11 @@ function fireCannons(id) {
 		damage: 0,
 		missed: true,
 		targetType: "none",
+		booty: {}
 	});
 
 }
+
 
 function updateNPCs() {
 	for (const npc of npcShips) {
@@ -94,15 +106,28 @@ function updateNPCs() {
 		if (dir === "right") npc.x = Math.min(GRID_WIDTH - 1, npc.x + 1);
 		if (dir === "up") npc.y = Math.max(0, npc.y - 1);
 		if (dir === "down") npc.y = Math.min(GRID_HEIGHT - 1, npc.y + 1);
-	}
 
-	for (const npc of npcShips) {
+		npc.tick();
+
 		for (const id in players) {
-			const p = players[id];
+			const p = players[id].ship;
 			const dx = Math.abs(npc.x - p.x);
 			const dy = Math.abs(npc.y - p.y);
-			if (dx + dy <= npc.cannon.range) {
-				p.hp -= npc.cannon.getDamage();
+			if (npc.cannon.canFire(dx + dy)) {
+				p.hp -= npc.cannon.fire();
+
+				if (p.hp <= 0) {
+					io.to(id).emit("message", "Your ship has been sunk!");
+
+					// Reset or mark for respawn
+					players[id].sunk = true;
+
+					// Schedule respawn
+					setTimeout(() => {
+						players[id].respawn(randomInt(0, GRID_WIDTH), randomInt(0, GRID_HEIGHT))
+						io.to(id).emit("message", "Welcome back!.");
+					}, 10000);
+				}
 			}
 		}
 	}
@@ -119,6 +144,31 @@ function updateNPCs() {
 	}
 }
 
+function updateIslands() {
+	for (const i of islands) {
+		i.tick();
+		for (const id in players) {
+			const p = players[id];
+			const s = p.ship
+			if (i.x == s.x && i.y == s.y) {
+				const msg = i.land(p);
+				if (msg) {
+					io.to(id).emit("message", msg)
+				}
+			}
+		}
+	}
+}
+
+
+function tick() {
+	for (const id in players) {
+		players[id].ship.tick();
+	}
+	updateNPCs();
+	updateIslands();
+}
+
 function getState() {
 	return {
 		players,
@@ -129,11 +179,12 @@ function getState() {
 
 module.exports = {
 	initWorld,
+	die,
 	addPlayer,
 	removePlayer,
 	movePlayer,
 	setPlayerName,
 	fireCannons,
-	updateNPCs,
+	tick,
 	getState
 };

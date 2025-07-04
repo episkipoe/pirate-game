@@ -31,6 +31,19 @@ body, html {
 	    border-radius: 4px;
 	    z-index: 10;
     }
+    #serverGold {
+	    position: absolute;
+	    top: 50px;
+	    right: 10px;
+	    font-size: 30px;
+	    color: gold;
+	    background-color: rgba(0, 0, 0, 0.4);
+	    padding: 4px 8px;
+	    border-radius: 4px;
+	    z-index: 10;
+    }
+
+
     #cooldownDisplay {
 	    color: white;
     }
@@ -40,13 +53,41 @@ body, html {
 	    width: 100%;
 	    text-align: center;
 	    font-size: 20px;
-	    color: #fff;
+	    color:white;
 	    text-shadow: 1px 1px 3px #000;
 	    z-index: 15;
 	    pointer-events: none;
     }
 
+    #goldDisplay {
+	    position: absolute;
+	    top: 10px;
+	    left: 10px;
+	    color: gold;
+	    font-size: 30px;
+	    font-weight: bold;
+	    text-shadow: 1px 1px 2px #000; /* makes it pop against blue background */
+	    z-index: 10;
+    }
 
+    #xpDisplay {
+	    position: absolute;
+	    top: 50px;
+	    left: 10px;
+	    color: white;
+	    font-size: 30px;
+	    font-weight: bold;
+	    text-shadow: 1px 1px 2px #000; /* makes it pop against blue background */
+	    z-index: 10;
+    }
+
+    #message {
+	    color: white;
+    }
+
+    #shipStatus {
+	    color: white;
+    }
     input, button {
 	    font-size: 16px;
 	    padding: 6px 12px;
@@ -63,10 +104,17 @@ body, html {
 	<body>
 		<div id="start">
 			<input type="text" id="nameInput" placeholder="Enter name">
-			<button id="startButton">Start</button>
+			<button id="startButton">Rename</button>
 			<div id="gameContainer"/>
 		</div>
 		<div id="coordDisplay"></div>
+		<div id="serverGold"></div>
+		
+		<div id="hud" style="position: absolute; top: 10px; left: 10px; color: white; font-size: 18px; white-space: nowrap">
+			<div id="goldDisplay"></div>
+			<div id="xpDisplay"></div>
+		</div>
+		<div id="shipStatus"></div>
 		<div id="message"></div>
 		<div id="ui">
 			<button id="fireButton">Fire Cannons</button>  
