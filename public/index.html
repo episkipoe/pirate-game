@@ -22,25 +22,29 @@ body, html {
 
     #coordDisplay {
 	    position: absolute;
-	    top: 10px;
+	    bottom: 10px;
 	    right: 10px;
 	    font-size: 16px;
 	    color: white;
 	    background-color: rgba(0, 0, 0, 0.4);
 	    padding: 4px 8px;
+	    pointer-events: none;
 	    border-radius: 4px;
 	    z-index: 10;
     }
+
     #serverGold {
 	    position: absolute;
-	    top: 50px;
+	    top: 10px;
 	    right: 10px;
-	    font-size: 30px;
+	    font-size: 25px;
 	    color: gold;
 	    background-color: rgba(0, 0, 0, 0.4);
 	    padding: 4px 8px;
 	    border-radius: 4px;
+	    pointer-events: none;
 	    z-index: 10;
+	    text-align: left;
     }
 
     #hud {
@@ -54,35 +58,11 @@ body, html {
 	    border-radius: 10px;
 	    font-family: sans-serif;
 	    pointer-events: none;
-	    z-index: 1000;
+	    z-index: 10;
 	    white-space: pre-line; 
 	    text-align: left;
     }
 
-
-    #goldDisplay {
-	    position: absolute;
-	    top: 10px;
-	    left: 10px;
-	    color: gold;
-	    font-size: 30px;
-	    font-weight: bold;
-	    text-shadow: 1px 1px 2px #000; /* makes it pop against blue background */
-	    pointer-events: none; 
-	    z-index: 10;
-    }
-
-    #xpDisplay {
-	    position: absolute;
-	    top: 50px;
-	    left: 10px;
-	    color: white;
-	    font-size: 30px;
-	    font-weight: bold;
-	    text-shadow: 1px 1px 2px #000; /* makes it pop against blue background */
-	    pointer-events: none; 
-	    z-index: 10;
-    }
 
     #cannonCooldown {
 	    position: absolute;
@@ -96,12 +76,13 @@ body, html {
 	    border-radius: 10px;
 	    font-family: sans-serif;
 	    pointer-events: none; 
+	    white-space: nowrap;
 	    z-index: 10;
     }
 
     #message {
 	    position: absolute;
-	    bottom: 40px;
+	    bottom: 50px;
 	    left: 50%;
 	    transform: translateX(-50%);
 	    background-color: rgba(0, 0, 0, 0.6);
@@ -114,11 +95,22 @@ body, html {
 	    z-index: 10;
     }
 
+    #nameDialog {
+	    padding: 20px;
+	    border: none;
+	    border-radius: 10px;
+	    background: white;
+	    color: black;
+	    font-family: sans-serif;
+	    font-size: 18px;
+	    text-align: center;
+    }
 
-    input, button {
-	    font-size: 16px;
-	    padding: 6px 12px;
-	    margin: 4px;
+    #nameDialog input {
+	    width: 100%;
+	    font-size: 18px;
+	    padding: 5px;
+	    margin-top: 8px;
     }
 
     canvas {
@@ -129,11 +121,17 @@ body, html {
 		</style>
 	</head>
 	<body>
-		<div id="start">
-			<input type="text" id="nameInput" placeholder="Enter name">
-			<button id="startButton">Rename</button>
-			<div id="gameContainer"/>
-		</div>
+		<dialog id="nameDialog">
+			<form method="dialog" id="nameForm">
+				<label for="playerName">Enter your name:</label><br>
+				<input type="text" id="playerName" name="playerName" required>
+				<br><br>
+				<button type="submit">Start</button>
+			</form>
+		</dialog>
+
+		<div id="gameContainer"/>
+
 		<div id="coordDisplay"></div>
 		<div id="serverGold"></div>
 		

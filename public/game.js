@@ -1,7 +1,13 @@
+const GRID_WIDTH = 300;
+const GRID_HEIGHT = 300;
+
 const socket = io();
 const TILE_SIZE = 45;
 const EXPLOSION_SIZE = 40
 const VIEW_RADIUS = 12;
+
+const seaEmojis = ["🌊", "⚓", "🦑", "🐙", "🦀", "🐬", "🐳", "🦈"];
+
 
 let scene;
 let myId = null;
@@ -54,14 +60,19 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-document.getElementById("startButton").onclick = () => {
-	const name = document.getElementById("nameInput").value;
-	socket.emit("setName", name);
-};
-
 socket.on("connect", () => {
 	myId = socket.id;
+
+	const dialog = document.getElementById("nameDialog");
+	dialog.showModal(); 
 });
+
+document.getElementById("nameForm").onsubmit = () => {
+	const name = document.getElementById("playerName").value.trim();
+	if (name.length > 0) {
+		socket.emit("setName", name);
+	}
+};
 
 
 function getCannonCooldown(cannon) {
@@ -70,17 +81,30 @@ function getCannonCooldown(cannon) {
 
 function getServerGoldStatus(state) {
 	let total = 0;
-	let richest = { name: "", gold: 0 }
+	let players = [];
+
 	for (let id in state.players) {
-		const p = state.players[id].ship;
-		total += p.gold
-		if (p.gold > richest.gold) {
-			richest.name = p.name
-			richest.gold = p.gold
-		}
+		const ship = state.players[id].ship;
+		if (!ship) continue;
+
+		total += ship.gold;
+		players.push({ name: ship.name, gold: ship.gold });
 	}
-	return "Total gold: " + total + "(" + richest.name + ")";
+
+	// Sort by gold descending
+	players.sort((a, b) => b.gold - a.gold);
+
+	// Take top 5
+	const top = players.slice(0, 5);
+
+	let leaderboard = "Total 💰: " + total + "\n";
+	top.forEach((p, i) => {
+		leaderboard += `${i + 1}. ${p.name} (${p.gold})\n`;
+	});
+
+	return leaderboard.trim();
 }
+
 
 function updateHUD(player) {
 	const hud = document.getElementById("hud");
@@ -128,12 +152,24 @@ socket.on("gameState", (state) => {
 			const x = centerX + dx * TILE_SIZE;
 			const y = centerY + dy * TILE_SIZE;
 
-			// Checkerboard: alternate opacity based on tile position
-			const alpha = (tx + ty) % 2 === 0 ? 1.0 : 0.85;
+			if (tx < 0 || tx > GRID_WIDTH || ty < 0 || ty > GRID_HEIGHT) {
+				const tile = scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE, 0x000);
+				tile.setOrigin(0.5);
+			} else {
+				if (Math.random() < 0.01) {
+					let emoji = seaEmojis[Math.floor(Math.random() * seaEmojis.length)];
+					const tile = scene.add.text(x, y, emoji, { fontSize: EXPLOSION_SIZE + "px" });
+					tile.setOrigin(0.5);
+				}
 
-			const tile = scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE, 0x3399ff);
-			tile.setOrigin(0.5);
-			tile.setAlpha(alpha);
+
+				// Checkerboard: alternate opacity based on tile position
+				const alpha = (tx + ty) % 2 === 0 ? 1.0 : 0.85;
+
+				const tile = scene.add.rectangle(x, y, TILE_SIZE, TILE_SIZE, 0x3399ff);
+				tile.setOrigin(0.5);
+				tile.setAlpha(alpha);
+			}
 		}
 	}
 
@@ -166,6 +202,8 @@ socket.on("gameState", (state) => {
 			backgroundColor: "rgba(0, 0, 0, 0.5)",
 			align: "center",
 		}).setOrigin(0.5);
+
+		console.log(npc.hp)
 
 		scene.add.text(x, y + TILE_SIZE, npc.hp, {
 			fontSize: `${TILE_SIZE / 2}px`,

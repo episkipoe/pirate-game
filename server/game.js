@@ -24,9 +24,14 @@ function createIsland() {
 	return new Island(randomInt(GRID_WIDTH - 2), randomInt(GRID_HEIGHT - 2));
 }
 
-function createNPC(id) {
-	const npc = new Ship(Math.floor(Math.random()), randomInt(GRID_WIDTH), randomInt(GRID_HEIGHT));
-	npc.randomType();
+function totalGold() {
+	return Object.values(players).reduce((sum, p) => sum + (p.ship?.gold || 0), 0);
+	
+}
+
+function createNPC() {
+	const npc = new Ship(randomInt(64000), randomInt(GRID_WIDTH), randomInt(GRID_HEIGHT));
+	npc.randomType(totalGold());
 	return npc;
 
 }
@@ -36,7 +41,7 @@ function initWorld(ioParam) {
 	islands = [];
 	for (let i = 0; i < N_ISLANDS; i++) islands.push(createIsland());
 	npcShips = [];
-	for (let i = 0; i < N_NPCS; i++) npcShips.push(createNPC(i)); 
+	for (let i = 0; i < N_NPCS; i++) npcShips.push(createNPC()); 
 }
 
 function die(id) {
@@ -96,25 +101,25 @@ function fireCannons(id) {
 
 }
 
+let spawnCooldown = 5;
 
 function updateNPCs() {
 	for (const npc of npcShips) {
-		const dir = ["left", "right", "up", "down"][randomInt(4)];
-		if (dir === "left") npc.x = Math.max(0, npc.x - 1);
-		if (dir === "right") npc.x = Math.min(GRID_WIDTH - 1, npc.x + 1);
-		if (dir === "up") npc.y = Math.max(0, npc.y - 1);
-		if (dir === "down") npc.y = Math.min(GRID_HEIGHT - 1, npc.y + 1);
-
 		npc.tick();
 
+		let blocked = false
 		for (const id in players) {
-			const p = players[id].ship;
-			const dx = Math.abs(npc.x - p.x);
-			const dy = Math.abs(npc.y - p.y);
+			const player = players[id];
+			const playerShip = player.ship;
+			const dx = Math.abs(npc.x - playerShip.x);
+			const dy = Math.abs(npc.y - playerShip.y);
+			if (dx <= 1 && dy <= 1) {
+				blocked = true
+			}
 			if (npc.cannon.canFire(dx + dy)) {
-				p.getHitFor(npc.fire());
+				playerShip.getHitFor(npc.fire());
 
-				if (p.hp <= 0) {
+				if (playerShip.hp <= 0) {
 					io.to(id).emit("message", "Your ship has been sunk!");
 
 					// Reset or mark for respawn
@@ -122,17 +127,44 @@ function updateNPCs() {
 
 					// Schedule respawn
 					setTimeout(() => {
-						players[id].respawn(randomInt(0, GRID_WIDTH), randomInt(0, GRID_HEIGHT))
+						player.respawn(randomInt(0, GRID_WIDTH), randomInt(0, GRID_HEIGHT))
 						io.to(id).emit("message", "Welcome back!.");
 					}, 10000);
 				}
 			}
 
-			if (p.cannon.canFire(dx + dy)) {
-				const booty = npc.getHitFor(p.fire())
-				players[id].pickup(booty)
+			if (playerShip.cannon.canFire(dx + dy)) {
+				const dmg = playerShip.fire();
+				const booty = npc.getHitFor(dmg)
+				if (booty.xp) {
+					io.to(id).emit("message", "You sank the " + npc.type + "!");
+					player.pickup(booty)
+				} else {
+					io.to(id).emit("message", dmg);
+				}
 			}
 		}
+
+		if (!blocked) {
+			if (!npc.destination || npc.x === npc.destination.x && npc.y === npc.destination.y) {
+				// Pick a random island as new destination
+				const island = islands[Math.floor(Math.random() * islands.length)];
+				if (island) {
+					npc.destination = { x: island.x, y: island.y };
+				}
+			}
+
+			// Move toward destination 1 step
+			if (npc.destination) {
+				if (npc.x < npc.destination.x) npc.x++;
+				else if (npc.x > npc.destination.x) npc.x--;
+
+				if (npc.y < npc.destination.y) npc.y++;
+				else if (npc.y > npc.destination.y) npc.y--;
+			}
+		}
+		
+
 	}
 
 	for (let i = 0; i < npcShips.length; i++) {
@@ -142,8 +174,12 @@ function updateNPCs() {
 		}
 	}
 
-	if (npcShips.length < MAX_NPCS) {
-		npcShips.push(createNPC());
+	spawnCooldown--;
+	if (spawnCooldown <= 0) {
+		spawnCooldown = 5;
+		if (npcShips.length < MAX_NPCS) {
+			npcShips.push(createNPC());
+		}
 	}
 }
 
